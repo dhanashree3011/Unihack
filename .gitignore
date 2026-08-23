@@ -1,0 +1,10 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+cache/*.sqlite3
+cache/documents/
+frontend/node_modules/
+frontend/dist/
+.env
+frontend/.env
