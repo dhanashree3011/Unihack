@@ -160,6 +160,26 @@ export default function App() {
           setBusy(false)
           loadCache()
         }
+      }, async (streamError) => {
+        setError(`${streamError.message}. Continuing with status polling.`)
+        const poll = async () => {
+          try {
+            const currentJob = await getJob(job_id)
+            const currentResults = await getResults(job_id)
+            setJob(currentJob)
+            setResults(currentResults)
+            if (currentJob.status === 'done') {
+              setBusy(false)
+              loadCache()
+              return
+            }
+            window.setTimeout(poll, 2000)
+          } catch (pollError) {
+            setError(pollError.message)
+            setBusy(false)
+          }
+        }
+        poll()
       })
     } catch (e) {
       setError(e.message)

@@ -20,18 +20,26 @@ async function readJsonResponse(res, fallbackMessage) {
   return payload
 }
 
+async function fetchJson(url, options, fallbackMessage) {
+  let res
+  try {
+    res = await fetch(url, options)
+  } catch (error) {
+    throw new Error(`${fallbackMessage}: cannot reach ${url}. ${error.message}`)
+  }
+  return readJsonResponse(res, fallbackMessage)
+}
+
 export async function uploadFile(file) {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch(`${BASE}/upload`, { method: 'POST', body: form })
-  return readJsonResponse(res, 'Upload failed')
+  return fetchJson(`${BASE}/upload`, { method: 'POST', body: form }, 'Upload failed')
 }
 
 export async function uploadTemplate(file) {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch(`${BASE}/upload_template`, { method: 'POST', body: form })
-  return readJsonResponse(res, 'Template upload failed')
+  return fetchJson(`${BASE}/upload_template`, { method: 'POST', body: form }, 'Template upload failed')
 }
 
 export async function startJob(uploadId, opts = {}) {
@@ -45,32 +53,27 @@ export async function startJob(uploadId, opts = {}) {
   if (opts.enrichmentMinMissing !== undefined) params.append('enrichment_min_missing', opts.enrichmentMinMissing)
   if (opts.templateUploadId)     params.append('template_upload_id', opts.templateUploadId)
 
-  const res = await fetch(`${BASE}/jobs?${params}`, { method: 'POST' })
-  return readJsonResponse(res, 'Failed to start job')
+  return fetchJson(`${BASE}/jobs?${params}`, { method: 'POST' }, 'Failed to start job')
 }
 
 export async function getJob(jobId) {
-  const res = await fetch(`${BASE}/jobs/${jobId}`)
-  return readJsonResponse(res, 'Failed to load job')
+  return fetchJson(`${BASE}/jobs/${jobId}`, undefined, 'Failed to load job')
 }
 
 export async function getResults(jobId) {
-  const res = await fetch(`${BASE}/jobs/${jobId}/results`)
-  return readJsonResponse(res, 'Failed to load results')
+  return fetchJson(`${BASE}/jobs/${jobId}/results`, undefined, 'Failed to load results')
 }
 
 export async function editResult(jobId, resultId, fieldPath, value) {
-  const res = await fetch(`${BASE}/jobs/${jobId}/results/${resultId}`, {
+  return fetchJson(`${BASE}/jobs/${jobId}/results/${resultId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ field_path: fieldPath, value }),
-  })
-  return readJsonResponse(res, 'Failed to save edit')
+  }, 'Failed to save edit')
 }
 
 export async function getEvaluation(jobId) {
-  const res = await fetch(`${BASE}/jobs/${jobId}/evaluate`)
-  return readJsonResponse(res, 'Failed to load evaluation')
+  return fetchJson(`${BASE}/jobs/${jobId}/evaluate`, undefined, 'Failed to load evaluation')
 }
 
 export function exportUrl(jobId, fmt) {
@@ -81,14 +84,17 @@ export function exportReviewLogUrl(jobId) {
   return `${BASE}/jobs/${jobId}/export?fmt=review_log`
 }
 
-export function streamJob(jobId, onEvent) {
+export function streamJob(jobId, onEvent, onError) {
   const es = new EventSource(`${BASE}/jobs/${jobId}/stream`)
   es.onmessage = (e) => {
     const data = JSON.parse(e.data)
     onEvent(data)
     if (data.type === 'job_done') es.close()
   }
-  es.onerror = () => es.close()
+  es.onerror = () => {
+    es.close()
+    onError?.(new Error(`Live progress unavailable at ${BASE}/jobs/${jobId}/stream`))
+  }
   return () => es.close()
 }
 export async function getCacheStats() {
