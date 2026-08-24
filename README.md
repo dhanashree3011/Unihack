@@ -155,8 +155,8 @@ uvicorn main:app --host 0.0.0.0 --port $PORT
 1. Import the same GitHub repository into Vercel.
 2. Set the project root to `frontend`.
 3. Use `npm run build` as the build command and `dist` as the output directory.
-4. Add `VITE_API_URL` with the Render API URL plus `/api`, for example:
-  `https://traceforge-api.onrender.com/api`.
+4. Add `VITE_API_URL` with the Render service root URL, without `/api`, for
+  example: `https://traceforge-api.onrender.com`.
 5. Deploy, then add the final Vercel URL to Render’s `FRONTEND_ORIGINS`.
 
 For Cloudflare Pages, use `frontend` as the root directory, `npm run build` as

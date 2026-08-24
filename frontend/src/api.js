@@ -1,18 +1,37 @@
-const BASE = import.meta.env.VITE_API_URL || '/api'
+const configuredBase = import.meta.env.VITE_API_URL?.replace(/\/+$/, '')
+const BASE = configuredBase
+  ? (configuredBase.endsWith('/api') ? configuredBase : `${configuredBase}/api`)
+  : '/api'
+
+async function readJsonResponse(res, fallbackMessage) {
+  const body = await res.text()
+  let payload
+  try {
+    payload = body ? JSON.parse(body) : null
+  } catch {
+    payload = null
+  }
+
+  if (!res.ok) {
+    const detail = payload?.detail || body.replace(/\s+/g, ' ').trim().slice(0, 180)
+    throw new Error(`${fallbackMessage} (${res.status})${detail ? `: ${detail}` : ''}`)
+  }
+
+  return payload
+}
+
 export async function uploadFile(file) {
   const form = new FormData()
   form.append('file', file)
   const res = await fetch(`${BASE}/upload`, { method: 'POST', body: form })
-  if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed')
-  return res.json()
+  return readJsonResponse(res, 'Upload failed')
 }
 
 export async function uploadTemplate(file) {
   const form = new FormData()
   form.append('file', file)
   const res = await fetch(`${BASE}/upload_template`, { method: 'POST', body: form })
-  if (!res.ok) throw new Error((await res.json()).detail || 'Template upload failed')
-  return res.json()
+  return readJsonResponse(res, 'Template upload failed')
 }
 
 export async function startJob(uploadId, opts = {}) {
@@ -27,18 +46,17 @@ export async function startJob(uploadId, opts = {}) {
   if (opts.templateUploadId)     params.append('template_upload_id', opts.templateUploadId)
 
   const res = await fetch(`${BASE}/jobs?${params}`, { method: 'POST' })
-  if (!res.ok) throw new Error((await res.json()).detail || 'Failed to start job')
-  return res.json()
+  return readJsonResponse(res, 'Failed to start job')
 }
 
 export async function getJob(jobId) {
   const res = await fetch(`${BASE}/jobs/${jobId}`)
-  return res.json()
+  return readJsonResponse(res, 'Failed to load job')
 }
 
 export async function getResults(jobId) {
   const res = await fetch(`${BASE}/jobs/${jobId}/results`)
-  return res.json()
+  return readJsonResponse(res, 'Failed to load results')
 }
 
 export async function editResult(jobId, resultId, fieldPath, value) {
@@ -47,12 +65,12 @@ export async function editResult(jobId, resultId, fieldPath, value) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ field_path: fieldPath, value }),
   })
-  return res.json()
+  return readJsonResponse(res, 'Failed to save edit')
 }
 
 export async function getEvaluation(jobId) {
   const res = await fetch(`${BASE}/jobs/${jobId}/evaluate`)
-  return res.json()
+  return readJsonResponse(res, 'Failed to load evaluation')
 }
 
 export function exportUrl(jobId, fmt) {
@@ -76,11 +94,10 @@ export function streamJob(jobId, onEvent) {
 export async function getCacheStats() {
   const res = await fetch(`${BASE}/cache/stats`)
   if (!res.ok) return null
-  return res.json()
+  return readJsonResponse(res, 'Failed to load cache stats')
 }
 
 export async function resetCache() {
   const res = await fetch(`${BASE}/cache`, { method: 'DELETE' })
-  if (!res.ok) throw new Error('Cache reset failed')
-  return res.json()
+  return readJsonResponse(res, 'Cache reset failed')
 }
