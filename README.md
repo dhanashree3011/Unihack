@@ -19,8 +19,8 @@ source evidence, and a human review path.**
   documents for repeatable development and testing.
 - **Human review that compounds**: corrections are stored in SQLite and can
   improve related rows in later batches.
-- **Built for technical documents**: fetch HTML and PDFs, extract text with
-  PyMuPDF, and use Tesseract when a PDF needs OCR.
+- **Built for technical documents**: fetch HTML and text-based PDFs with
+  PyMuPDF while skipping scanned PDFs to stay lightweight.
 - **Fast batch processing**: concurrent workers handle I/O-heavy web requests
   while server-sent events stream progress to the frontend.
 
@@ -30,7 +30,7 @@ source evidence, and a human review path.**
 CSV/XLSX
    |
    v
-Search manufacturer sources --> Fetch HTML/PDF --> Text extraction + OCR
+Search manufacturer sources --> Fetch HTML/PDF --> Text extraction
                                                         |
                                                         v
                  BM25+ knowledge base --> Rules + normalization --> Classification
@@ -85,18 +85,7 @@ Then install the project packages:
 pip install -r requirements.txt
 ```
 
-### 2. Install the OCR binary (optional)
-
-`pytesseract` is included in the Python dependencies, but Tesseract itself is
-installed separately. OCR is only needed for scanned or image-only PDFs.
-
-- **Windows**: install the [UB Mannheim Tesseract build](https://github.com/UB-Mannheim/tesseract/wiki)
-- **Ubuntu/Debian**: `sudo apt install tesseract-ocr`
-- **macOS**: `brew install tesseract`
-
-If Tesseract is not on `PATH`, set `TESSERACT_CMD` to its executable path.
-
-### 3. Start the backend
+### 2. Start the backend
 
 From the repository root:
 
@@ -107,7 +96,7 @@ uvicorn main:app --reload --port 8000
 The API is available at `http://localhost:8000`. Interactive API docs are at
 `http://localhost:8000/docs`.
 
-### 4. Start the frontend
+### 3. Start the frontend
 
 In a second terminal:
 

@@ -3,7 +3,7 @@ pipeline.py
 ------------
 Orchestrates the full per-row flow:
 
-  clean -> (cache check) -> search -> fetch (+OCR fallback) -> build KB
+    clean -> (cache check) -> search -> fetch -> build KB
   -> extract attributes -> normalize -> classify -> build descriptions
   -> assemble a field dict with confidence + provenance per field
 
@@ -33,7 +33,7 @@ import time
 import concurrent.futures
 from dataclasses import dataclass, field as dc_field
 
-from . import (cleaning, normalize, search_engine, fetch, ocr, kb_index,
+from . import (cleaning, normalize, search_engine, fetch, kb_index,
                extract, describe, classify, cache_store, config)
 
 NOISE_DESC_TOKENS = re.compile(
@@ -222,7 +222,7 @@ def gather_documents(mfr_url, ref_urls, doc_urls, live: bool, injected_documents
     Fault isolation: each URL is processed independently, inside its own
     try/except. fetch.fetch_and_extract() already never raises for the
     download/parse steps (see fetch.py), but this loop also calls
-    ocr.ocr_pdf_bytes() and touches dict keys from that result - wrapping
+    document parsing and touches dict keys from that result - wrapping
     the whole per-URL body means ANY unexpected failure on one document
     (a truly pathological PDF, a key that isn't there for some edge-case
     "kind") just skips that one document instead of losing every OTHER
@@ -240,15 +240,12 @@ def gather_documents(mfr_url, ref_urls, doc_urls, live: bool, injected_documents
         try:
             result = fetch.fetch_and_extract(url)
             text = result.get("text", "")
-            used_ocr = False
             if result.get("kind") == "pdf" and result.get("needs_ocr"):
-                text = ocr.ocr_pdf_bytes(result["raw"])
-                used_ocr = True
+                continue
             if text:
                 documents.append({
                     "url": url, "text": text, "meta": result.get("meta", {}),
                     "raw_html": result.get("raw") if result.get("kind") == "html" else None,
-                    "used_ocr": used_ocr,
                 })
         except Exception as e:
             if errors is not None:

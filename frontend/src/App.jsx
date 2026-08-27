@@ -27,7 +27,7 @@ export default function App() {
   const [liveMode, setLiveMode] = useState(true)
   const [politenessDelay, setPolitenessDelay] = useState(0.5)
   const [concurrentMode, setConcurrentMode] = useState(true)
-  const [maxWorkers, setMaxWorkers] = useState(4)
+  const [maxWorkers, setMaxWorkers] = useState(1)
   const [dynamicEnrichment, setDynamicEnrichment] = useState(true)
   const [enrichmentMinMissing, setEnrichmentMinMissing] = useState(3)
   const [cacheStats, setCacheStats] = useState({
@@ -45,6 +45,7 @@ export default function App() {
   const [activePart, setActivePart] = useState(null)
   const [lastRunLive, setLastRunLive] = useState(null)
   const [toast, setToast] = useState(null)
+  const [showResourceNotice, setShowResourceNotice] = useState(true)
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterConfidence, setFilterConfidence] = useState('all')
@@ -288,13 +289,32 @@ export default function App() {
   return (
     <div className="app">
       {toast && <div className="toast-notice">{toast}</div>}
+      {showResourceNotice && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="resource-dialog" role="dialog" aria-modal="true" aria-labelledby="resource-dialog-title">
+            <div className="resource-dialog-kicker">Runtime limit</div>
+            <h2 id="resource-dialog-title">Lightweight mode is enabled</h2>
+            <p>
+              OCR has been disabled to reduce memory usage. Scanned PDFs will be skipped,
+              while text-based PDFs and web pages continue to work normally.
+            </p>
+            <p>
+              One worker is recommended. Increasing workers can use more memory and may
+              crash the hosted service.
+            </p>
+            <button className="btn btn-primary" onClick={() => setShowResourceNotice(false)}>
+              Continue
+            </button>
+          </section>
+        </div>
+      )}
 
       <aside className="rail">
         <div className="brand">
           <div className="brand-mark">▲ TraceForge</div>
           <div className="brand-title">Product Intelligence</div>
           <div className="brand-sub">
-            Web search → Fetch/OCR → BM25 Knowledge Base → Rule Extraction → Self-learning Human Review
+            Web search → Fetch → BM25 Knowledge Base → Rule Extraction → Self-learning Human Review
           </div>
         </div>
 
@@ -416,8 +436,15 @@ export default function App() {
               step="1"
               value={maxWorkers}
               disabled={!concurrentMode}
-              onChange={(e) => setMaxWorkers(e.target.value)}
+              onChange={(e) => {
+                const workers = Number(e.target.value)
+                setMaxWorkers(workers)
+                if (workers > 1) setShowResourceNotice(true)
+              }}
             />
+          </div>
+          <div className="resource-warning">
+            One worker is safest. More workers may exceed the hosted service memory limit.
           </div>
 
           <div className={`form-toggle-row ${!liveMode ? 'disabled' : ''}`}>
